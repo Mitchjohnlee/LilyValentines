@@ -6,6 +6,8 @@ export default function Page() {
   const [yesPressed, setYesPressed] = useState(false);
   const [noButtonPosition, setNoButtonPosition] = useState({ x: 0, y: 0 });
   const [yesButtonPosition, setYesButtonPosition] = useState({ x: 0, y: 0 });
+  const [showGreeting, setShowGreeting] = useState(true);
+  const [titleOpacity, setTitleOpacity] = useState(1);
   const noButtonRef = useRef(null);
   const yesButtonRef = useRef(null);
   const isInitialized = useRef(false);
@@ -23,6 +25,23 @@ export default function Page() {
       });
       isInitialized.current = true;
     }
+  }, []);
+
+  useEffect(() => {
+    // Show "Hi Ashley" for 5 seconds, then fade to "Will You be my Valentine?"
+    const timer = setTimeout(() => {
+      // Fade out greeting
+      setTitleOpacity(0);
+      setTimeout(() => {
+        setShowGreeting(false);
+        // Fade in question
+        setTimeout(() => {
+          setTitleOpacity(1);
+        }, 50);
+      }, 500); // Wait for fade out to complete
+    }, 5000); // Show greeting for 5 seconds
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -161,8 +180,11 @@ export default function Page() {
             className="h-[230px] rounded-lg shadow-lg"
             src="https://gifdb.com/images/high/cute-love-bear-roses-ou7zho5oosxnpo6k.webp"
           />
-          <h1 className="text-4xl md:text-6xl my-4 text-center">
-            Will you be my Valentine?
+          <h1 
+            className="text-4xl md:text-6xl my-4 text-center transition-opacity duration-500"
+            style={{ opacity: titleOpacity }}
+          >
+            {showGreeting ? "Hi Ashley" : "Will you be my Valentine?"}
           </h1>
           <div className="flex flex-wrap justify-center gap-2 items-center">
             <button
