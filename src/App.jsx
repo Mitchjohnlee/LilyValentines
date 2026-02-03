@@ -1,41 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import lovesvg from "./assets/All You Need Is Love SVG Cut File.svg";
 import lovesvg2 from "./assets/Love In The Air SVG Cut File.svg";
 
 export default function Page() {
-  const [noCount, setNoCount] = useState(0);
   const [yesPressed, setYesPressed] = useState(false);
-  const yesButtonSize = noCount * 20 + 16;
+  const [noButtonPosition, setNoButtonPosition] = useState({ x: 0, y: 0 });
+  const [yesButtonPosition, setYesButtonPosition] = useState({ x: 0, y: 0 });
+  const noButtonRef = useRef(null);
+  const yesButtonRef = useRef(null);
+  const isInitialized = useRef(false);
 
-  const handleNoClick = () => {
-    setNoCount(noCount + 1);
-  };
+  useEffect(() => {
+    // Initialize button positions
+    if (!isInitialized.current) {
+      setNoButtonPosition({
+        x: window.innerWidth / 2 + 100,
+        y: window.innerHeight / 2 + 50,
+      });
+      setYesButtonPosition({
+        x: window.innerWidth / 2 - 100,
+        y: window.innerHeight / 2 + 50,
+      });
+      isInitialized.current = true;
+    }
+  }, []);
 
-  const getNoButtonText = () => {
-    const phrases = [
-      "No",
-      "Are you sure?",
-      "Really sure?",
-      "Think again!",
-      "Last chance!",
-      "Surely not?",
-      "You might regret this!",
-      "Give it another thought!",
-      "Are you absolutely certain?",
-      "This could be a mistake!",
-      "Have a heart!",
-      "Don't be so cold!",
-      "Change of heart?",
-      "Wouldn't you reconsider?",
-      "Is that your final answer?",
-      "You're breaking my heart ;(",
-      "Is that your final answer?",
-      "You're breaking my heart ;(",
-      "Plsss? :( You're breaking my heart",
-    ];
+  useEffect(() => {
+    if (yesPressed) return;
 
-    return phrases[Math.min(noCount, phrases.length - 1)];
-  };
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let lastMouseX = mouseX;
+    let lastMouseY = mouseY;
+    let mouseVelocityX = 0;
+    let mouseVelocityY = 0;
+
+    const handleMouseMove = (e) => {
+      // Track mouse velocity for predictive movement
+      mouseVelocityX = e.clientX - lastMouseX;
+      mouseVelocityY = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    };
+
+    const moveButtonAway = (buttonRef, setPosition, currentPosition) => {
+      if (!buttonRef.current) return;
+
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      
+      // Get button center position
+      const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+      const buttonCenterY = buttonRect.top + buttonRect.height / 2;
+      
+      // Predict where mouse might be going (add velocity prediction)
+      const predictedMouseX = mouseX + mouseVelocityX * 2;
+      const predictedMouseY = mouseY + mouseVelocityY * 2;
+      
+      // Calculate distance from predicted mouse to button center
+      const dx = buttonCenterX - predictedMouseX;
+      const dy = buttonCenterY - predictedMouseY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Increased detection radius and much faster movement
+      const detectionRadius = 200;
+      if (distance < detectionRadius) {
+        // Calculate angle from mouse to button
+        const angle = Math.atan2(dy, dx);
+        // Much more aggressive movement - moves much further and faster
+        const moveDistance = (detectionRadius - distance) * 2.5 + 30;
+        
+        // Calculate new position (move in the direction away from cursor)
+        let newX = buttonCenterX + Math.cos(angle) * moveDistance;
+        let newY = buttonCenterY + Math.sin(angle) * moveDistance;
+        
+        // Keep button within viewport bounds
+        const buttonWidth = buttonRect.width;
+        const buttonHeight = buttonRect.height;
+        const padding = 10;
+        newX = Math.max(padding + buttonWidth / 2, Math.min(newX, window.innerWidth - buttonWidth / 2 - padding));
+        newY = Math.max(padding + buttonHeight / 2, Math.min(newY, window.innerHeight - buttonHeight / 2 - padding));
+        
+        setPosition({ x: newX, y: newY });
+      }
+    };
+
+    // Use requestAnimationFrame for smooth, fast updates
+    let animationFrameId;
+    const animate = () => {
+      moveButtonAway(noButtonRef, setNoButtonPosition, noButtonPosition);
+      moveButtonAway(yesButtonRef, setYesButtonPosition, yesButtonPosition);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, [yesPressed]);
 
   return (
     <div className="overflow-hidden flex flex-col items-center justify-center pt-4 h-screen -mt-16 selection:bg-rose-600 selection:text-white text-zinc-900">
@@ -65,17 +130,35 @@ export default function Page() {
           </h1>
           <div className="flex flex-wrap justify-center gap-2 items-center">
             <button
-              className={`bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg mr-4`}
-              style={{ fontSize: yesButtonSize }}
+              ref={yesButtonRef}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg"
               onClick={() => setYesPressed(true)}
+              style={{
+                position: "fixed",
+                left: `${yesButtonPosition.x}px`,
+                top: `${yesButtonPosition.y}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 1000,
+                transition: "none",
+                pointerEvents: "auto",
+              }}
             >
               Yes
             </button>
             <button
-              onClick={handleNoClick}
-              className=" bg-rose-500 hover:bg-rose-600 rounded-lg text-white font-bold py-2 px-4"
+              ref={noButtonRef}
+              className="bg-rose-500 hover:bg-rose-600 rounded-lg text-white font-bold py-2 px-4"
+              style={{
+                position: "fixed",
+                left: `${noButtonPosition.x}px`,
+                top: `${noButtonPosition.y}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 1000,
+                transition: "none",
+                pointerEvents: "auto",
+              }}
             >
-              {noCount === 0 ? "No" : getNoButtonText()}
+              No
             </button>
           </div>
         </>
