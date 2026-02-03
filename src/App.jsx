@@ -86,11 +86,47 @@ export default function Page() {
       }
     };
 
+    const moveButtonTowards = (buttonRef, setPosition) => {
+      if (!buttonRef.current) return;
+
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      
+      // Get button center position
+      const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+      const buttonCenterY = buttonRect.top + buttonRect.height / 2;
+      
+      // Calculate direction from button to cursor
+      const dx = mouseX - buttonCenterX;
+      const dy = mouseY - buttonCenterY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // If cursor is far enough away, move button towards it
+      if (distance > 5) {
+        // Calculate angle from button to cursor
+        const angle = Math.atan2(dy, dx);
+        // Move towards cursor with smooth following speed
+        const moveSpeed = Math.min(distance * 0.15, 20); // Smooth following, max speed
+        
+        // Calculate new position (move towards cursor)
+        let newX = buttonCenterX + Math.cos(angle) * moveSpeed;
+        let newY = buttonCenterY + Math.sin(angle) * moveSpeed;
+        
+        // Keep button within viewport bounds
+        const buttonWidth = buttonRect.width;
+        const buttonHeight = buttonRect.height;
+        const padding = 10;
+        newX = Math.max(padding + buttonWidth / 2, Math.min(newX, window.innerWidth - buttonWidth / 2 - padding));
+        newY = Math.max(padding + buttonHeight / 2, Math.min(newY, window.innerHeight - buttonHeight / 2 - padding));
+        
+        setPosition({ x: newX, y: newY });
+      }
+    };
+
     // Use requestAnimationFrame for smooth, fast updates
     let animationFrameId;
     const animate = () => {
       moveButtonAway(noButtonRef, setNoButtonPosition, noButtonPosition);
-      moveButtonAway(yesButtonRef, setYesButtonPosition, yesButtonPosition);
+      moveButtonTowards(yesButtonRef, setYesButtonPosition);
       animationFrameId = requestAnimationFrame(animate);
     };
     animate();
